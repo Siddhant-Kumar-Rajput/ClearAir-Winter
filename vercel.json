@@ -8,7 +8,7 @@
       "destination": "/api/index"
     },
     {
-      "source": "/((?!api/|privacy\\.html|terms\\.html).*)",
+      "source": "/((?!api/|privacy\\.html|terms\\.html|googlec386f2144a0acb7b\\.html).*)",
       "destination": "/index.html"
     }
   ]
