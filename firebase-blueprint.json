@@ -1,0 +1,315 @@
+{
+  "entities": {
+    "HouseholdProfile": {
+      "title": "HouseholdProfile",
+      "description": "Private owner-only household air quality and lifestyle configuration.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayAlias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "country": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "residentsCount": {
+          "type": "integer"
+        },
+        "sensitiveGroups": {
+          "type": "array",
+          "description": "Up to 4 sensitive group tags (children, seniors, asthma_respiratory, pregnant)."
+        },
+        "homeType": {
+          "type": "string",
+          "enum": ["apartment", "townhouse", "detached_house", "shared_housing"]
+        },
+        "heatingFuel": {
+          "type": "string",
+          "enum": ["electric_heat_pump", "natural_gas", "wood_coal", "district_heating", "kerosene_oil"]
+        },
+        "cookingFuel": {
+          "type": "string",
+          "enum": ["induction_electric", "natural_gas", "lpg_cylinder", "biomass_solid"]
+        },
+        "commuteMode": {
+          "type": "string",
+          "enum": ["car_petrol_diesel", "car_ev_hybrid", "public_transit", "walk_bike", "remote_wfh"]
+        },
+        "indoorGear": {
+          "type": "array",
+          "description": "Up to 6 available mitigation tools (hepa_purifier, box_fan_diy, kitchen_exhaust, window_seals, hygrometer, n95_masks)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayAlias",
+        "city",
+        "country",
+        "latitude",
+        "longitude",
+        "residentsCount",
+        "sensitiveGroups",
+        "homeType",
+        "heatingFuel",
+        "cookingFuel",
+        "commuteMode",
+        "indoorGear",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedRoutine": {
+      "title": "SavedRoutine",
+      "description": "Owner-only saved AI-generated winter smog routine and quantified impact snapshot.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "aqiAtGeneration": {
+          "type": "number"
+        },
+        "pm25AtGeneration": {
+          "type": "number"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1200
+        },
+        "ventilationWindow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "highlights": {
+          "type": "array",
+          "description": "Up to 10 key routine or hack highlight lines."
+        },
+        "selectedActionIds": {
+          "type": "array",
+          "description": "Up to 20 selected action IDs."
+        },
+        "estimatedPm25ReductionPct": {
+          "type": "number"
+        },
+        "estimatedWeeklyCo2SavedKg": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "city",
+        "aqiAtGeneration",
+        "pm25AtGeneration",
+        "summary",
+        "ventilationWindow",
+        "highlights",
+        "selectedActionIds",
+        "estimatedPm25ReductionPct",
+        "estimatedWeeklyCo2SavedKg",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CommunityPledge": {
+      "title": "CommunityPledge",
+      "description": "Public non-PII neighborhood clean-air pledge.",
+      "type": "object",
+      "properties": {
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayAlias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string",
+          "enum": ["commute", "heating", "indoor_air", "cooking", "community"]
+        },
+        "actionTitle": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 140
+        },
+        "impactExplanation": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 400
+        },
+        "weeklyCo2SavedKg": {
+          "type": "number"
+        },
+        "supportersCount": {
+          "type": "integer"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "authorUid",
+        "displayAlias",
+        "city",
+        "category",
+        "actionTitle",
+        "impactExplanation",
+        "weeklyCo2SavedKg",
+        "supportersCount",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SmogReport": {
+      "title": "SmogReport",
+      "description": "Public non-PII neighborhood winter smog observation.",
+      "type": "object",
+      "properties": {
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayAlias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "neighborhood": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["moderate", "unhealthy_sensitive", "unhealthy", "severe"]
+        },
+        "observedSource": {
+          "type": "string",
+          "enum": ["traffic_inversion", "wood_coal_smoke", "industrial_haze", "construction_dust", "mixed_smog"]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 360
+        },
+        "helpfulCount": {
+          "type": "integer"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "authorUid",
+        "displayAlias",
+        "city",
+        "neighborhood",
+        "severity",
+        "observedSource",
+        "note",
+        "helpfulCount",
+        "visibility",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/HouseholdProfile" },
+      "description": "Private owner-only household profile and lifestyle settings."
+    },
+    "/users/{userId}/routines/{routineId}": {
+      "schema": { "$ref": "#/entities/SavedRoutine" },
+      "description": "Owner-only saved AI-generated winter smog routines and impact logs."
+    },
+    "/community_pledges/{pledgeId}": {
+      "schema": { "$ref": "#/entities/CommunityPledge" },
+      "description": "Public non-PII community clean-air pledges."
+    },
+    "/smog_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/SmogReport" },
+      "description": "Public non-PII neighborhood smog observations."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "ClearAir Winter",
+  "description": "GenAI-powered household hub and community action board for navigating severe winter smog with low-emission daily routines, indoor air quality hacks, and quantified impact guidance.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

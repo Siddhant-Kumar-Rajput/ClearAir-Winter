@@ -1,0 +1,283 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Shared Primitives
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidStringList(listVal, maxItems, maxItemLen) {
+      return listVal is list
+        && listVal.size() <= maxItems
+        && (listVal.size() == 0 || (listVal[0] is string && listVal[0].size() >= 1 && listVal[0].size() <= maxItemLen));
+    }
+
+    // -------------------------------------------------------------------------
+    // Entity Validation Blueprints
+    // -------------------------------------------------------------------------
+    function isValidHouseholdProfile(data, userId) {
+      return data.keys().hasAll([
+          'uid', 'displayAlias', 'city', 'country', 'latitude', 'longitude',
+          'residentsCount', 'sensitiveGroups', 'homeType', 'heatingFuel',
+          'cookingFuel', 'commuteMode', 'indoorGear', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayAlias', 'city', 'country', 'latitude', 'longitude',
+          'residentsCount', 'sensitiveGroups', 'homeType', 'heatingFuel',
+          'cookingFuel', 'commuteMode', 'indoorGear', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && isValidString(data.displayAlias, 1, 60)
+        && isValidString(data.city, 1, 120)
+        && isValidString(data.country, 1, 80)
+        && data.latitude is number && data.latitude >= -90 && data.latitude <= 90
+        && data.longitude is number && data.longitude >= -180 && data.longitude <= 180
+        && data.residentsCount is int && data.residentsCount >= 1 && data.residentsCount <= 20
+        && isValidStringList(data.sensitiveGroups, 4, 40)
+        && data.sensitiveGroups.hasOnly(['children', 'seniors', 'asthma_respiratory', 'pregnant'])
+        && data.homeType in ['apartment', 'townhouse', 'detached_house', 'shared_housing']
+        && data.heatingFuel in ['electric_heat_pump', 'natural_gas', 'wood_coal', 'district_heating', 'kerosene_oil']
+        && data.cookingFuel in ['induction_electric', 'natural_gas', 'lpg_cylinder', 'biomass_solid']
+        && data.commuteMode in ['car_petrol_diesel', 'car_ev_hybrid', 'public_transit', 'walk_bike', 'remote_wfh']
+        && isValidStringList(data.indoorGear, 6, 40)
+        && data.indoorGear.hasOnly(['hepa_purifier', 'box_fan_diy', 'kitchen_exhaust', 'window_seals', 'hygrometer', 'n95_masks'])
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSavedRoutine(data, userId) {
+      return data.keys().hasAll([
+          'uid', 'city', 'aqiAtGeneration', 'pm25AtGeneration', 'summary',
+          'ventilationWindow', 'highlights', 'selectedActionIds',
+          'estimatedPm25ReductionPct', 'estimatedWeeklyCo2SavedKg',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'city', 'aqiAtGeneration', 'pm25AtGeneration', 'summary',
+          'ventilationWindow', 'highlights', 'selectedActionIds',
+          'estimatedPm25ReductionPct', 'estimatedWeeklyCo2SavedKg',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && isValidString(data.city, 1, 120)
+        && data.aqiAtGeneration is number && data.aqiAtGeneration >= 0 && data.aqiAtGeneration <= 1000
+        && data.pm25AtGeneration is number && data.pm25AtGeneration >= 0 && data.pm25AtGeneration <= 2000
+        && isValidString(data.summary, 1, 1200)
+        && isValidString(data.ventilationWindow, 1, 140)
+        && isValidStringList(data.highlights, 10, 220)
+        && isValidStringList(data.selectedActionIds, 20, 80)
+        && data.estimatedPm25ReductionPct is number && data.estimatedPm25ReductionPct >= 0 && data.estimatedPm25ReductionPct <= 100
+        && data.estimatedWeeklyCo2SavedKg is number && data.estimatedWeeklyCo2SavedKg >= 0 && data.estimatedWeeklyCo2SavedKg <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCommunityPledge(data) {
+      return data.keys().hasAll([
+          'authorUid', 'displayAlias', 'city', 'category', 'actionTitle',
+          'impactExplanation', 'weeklyCo2SavedKg', 'supportersCount',
+          'visibility', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'authorUid', 'displayAlias', 'city', 'category', 'actionTitle',
+          'impactExplanation', 'weeklyCo2SavedKg', 'supportersCount',
+          'visibility', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.authorUid)
+        && isValidString(data.displayAlias, 1, 60)
+        && isValidString(data.city, 1, 120)
+        && data.category in ['commute', 'heating', 'indoor_air', 'cooking', 'community']
+        && isValidString(data.actionTitle, 3, 140)
+        && isValidString(data.impactExplanation, 5, 400)
+        && data.weeklyCo2SavedKg is number && data.weeklyCo2SavedKg >= 0 && data.weeklyCo2SavedKg <= 250
+        && data.supportersCount is int && data.supportersCount >= 1 && data.supportersCount <= 1000000
+        && data.visibility == 'public'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSmogReport(data) {
+      return data.keys().hasAll([
+          'authorUid', 'displayAlias', 'city', 'neighborhood', 'severity',
+          'observedSource', 'note', 'helpfulCount', 'visibility',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'authorUid', 'displayAlias', 'city', 'neighborhood', 'severity',
+          'observedSource', 'note', 'helpfulCount', 'visibility',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.authorUid)
+        && isValidString(data.displayAlias, 1, 60)
+        && isValidString(data.city, 1, 120)
+        && isValidString(data.neighborhood, 1, 100)
+        && data.severity in ['moderate', 'unhealthy_sensitive', 'unhealthy', 'severe']
+        && data.observedSource in ['traffic_inversion', 'wood_coal_smoke', 'industrial_haze', 'construction_dust', 'mixed_smog']
+        && isValidString(data.note, 5, 360)
+        && data.helpfulCount is int && data.helpfulCount >= 1 && data.helpfulCount <= 1000000
+        && data.visibility == 'public'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // -------------------------------------------------------------------------
+    // Collection Rules
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isEmailVerified()
+        && isValidHouseholdProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isEmailVerified()
+        && isValidHouseholdProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayAlias', 'city', 'country', 'latitude', 'longitude',
+          'residentsCount', 'sensitiveGroups', 'homeType', 'heatingFuel',
+          'cookingFuel', 'commuteMode', 'indoorGear', 'updatedAt'
+        ]);
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      match /routines/{routineId} {
+        allow get: if isValidId(userId)
+          && isValidId(routineId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(routineId)
+          && isOwner(userId)
+          && isEmailVerified()
+          && isValidSavedRoutine(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isValidId(userId)
+          && isValidId(routineId)
+          && isOwner(userId)
+          && isEmailVerified()
+          && isValidSavedRoutine(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'selectedActionIds', 'estimatedPm25ReductionPct',
+            'estimatedWeeklyCo2SavedKg', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId)
+          && isValidId(routineId)
+          && isOwner(userId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+      }
+    }
+
+    match /community_pledges/{pledgeId} {
+      allow get: if isValidId(pledgeId) && existing().visibility == 'public';
+      allow list: if resource.data.visibility == 'public';
+      allow create: if isValidId(pledgeId)
+        && isEmailVerified()
+        && isValidCommunityPledge(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().supportersCount == 1
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(pledgeId)
+        && isEmailVerified()
+        && isValidCommunityPledge(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().visibility == existing().visibility
+        && incoming().updatedAt == request.time
+        && (
+          (
+            incoming().supportersCount == existing().supportersCount + 1
+            && incoming().diff(existing()).affectedKeys().hasOnly(['supportersCount', 'updatedAt'])
+          ) ||
+          (
+            existing().authorUid == request.auth.uid
+            && incoming().supportersCount == existing().supportersCount
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'actionTitle', 'impactExplanation', 'category', 'weeklyCo2SavedKg', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(pledgeId) && isSignedIn() && existing().authorUid == request.auth.uid;
+    }
+
+    match /smog_reports/{reportId} {
+      allow get: if isValidId(reportId) && existing().visibility == 'public';
+      allow list: if resource.data.visibility == 'public';
+      allow create: if isValidId(reportId)
+        && isEmailVerified()
+        && isValidSmogReport(incoming())
+        && incoming().authorUid == request.auth.uid
+        && incoming().helpfulCount == 1
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(reportId)
+        && isEmailVerified()
+        && isValidSmogReport(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().visibility == existing().visibility
+        && incoming().updatedAt == request.time
+        && (
+          (
+            incoming().helpfulCount == existing().helpfulCount + 1
+            && incoming().diff(existing()).affectedKeys().hasOnly(['helpfulCount', 'updatedAt'])
+          ) ||
+          (
+            existing().authorUid == request.auth.uid
+            && incoming().helpfulCount == existing().helpfulCount
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'neighborhood', 'severity', 'observedSource', 'note', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(reportId) && isSignedIn() && existing().authorUid == request.auth.uid;
+    }
+  }
+}
