@@ -1,13 +1,9 @@
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  type User,
-} from 'firebase/auth';
+import { type User } from 'firebase/auth';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdvisorChatPanel } from './components/AdvisorChatPanel.tsx';
 import { CommunityBoardView } from './components/CommunityBoardView.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import { GoogleTasksPanel } from './components/GoogleTasksPanel.tsx';
 import { HouseholdProfilePanel } from './components/HouseholdProfilePanel.tsx';
 import { ImpactSimulatorPanel } from './components/ImpactSimulatorPanel.tsx';
 import { LocationTelemetryBar } from './components/LocationTelemetryBar.tsx';
@@ -20,8 +16,11 @@ import {
   searchCitiesApi,
 } from './lib/apiClient.ts';
 import {
-  auth,
-  googleProvider,
+  clearAccessToken,
+  getAccessToken,
+  signInWithGoogleWorkspace,
+  signOutWorkspace,
+  subscribeWorkspaceAuth,
   testFirestoreConnection,
 } from './lib/firebase.ts';
 import {
@@ -75,6 +74,7 @@ function ClearAirWorkspace() {
   // Auth & Firebase Readiness
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [tasksToken, setTasksToken] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Location & Live Air Quality Telemetry
@@ -148,11 +148,12 @@ function ClearAirWorkspace() {
     });
   }, [loadCityAirQuality]);
 
-  // Auth state listener + saved profile hydration
+  // Auth state listener + saved profile hydration + in-memory token sync
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (nextUser) => {
+    const unsub = subscribeWorkspaceAuth(async (nextUser, hasToken) => {
       setUser(nextUser);
       setAuthReady(true);
+      setTasksToken(hasToken ? getAccessToken() : null);
       if (nextUser) {
         try {
           const saved = await loadHouseholdProfile(nextUser.uid);
@@ -200,7 +201,8 @@ function ClearAirWorkspace() {
   const handleSignIn = async () => {
     setAuthError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const { accessToken } = await signInWithGoogleWorkspace();
+      setTasksToken(accessToken);
     } catch (err) {
       setAuthError(
         err instanceof Error ? err.message : 'Google sign-in was cancelled.',
@@ -210,8 +212,14 @@ function ClearAirWorkspace() {
 
   const handleSignOut = async () => {
     setAuthError(null);
-    await signOut(auth);
+    setTasksToken(null);
+    await signOutWorkspace();
   };
+
+  const handleTokenExpired = useCallback(() => {
+    clearAccessToken();
+    setTasksToken(null);
+  }, []);
 
   const handleSelectCity = (city: CityMatch) => {
     void loadCityAirQuality({
@@ -488,13 +496,21 @@ function ClearAirWorkspace() {
                 />
               </div>
 
-              <div className="lg:col-span-5">
+              <div className="lg:col-span-5 space-y-6">
                 <AdvisorChatPanel
                   city={snapshot?.city ?? profile.city}
                   messages={advisorMessages}
                   loading={advisorLoading}
                   error={advisorError}
                   onSendQuestion={handleAskAdvisor}
+                />
+                <GoogleTasksPanel
+                  city={snapshot?.city ?? profile.city}
+                  plan={plan}
+                  selectedActionIds={selectedActionIds}
+                  accessToken={tasksToken}
+                  onConnectTasks={handleSignIn}
+                  onTokenExpired={handleTokenExpired}
                 />
               </div>
             </div>
@@ -530,6 +546,14 @@ function ClearAirWorkspace() {
                 if (user) await deleteSavedRoutine(user.uid, id);
               }}
               onPromptSignIn={handleSignIn}
+            />
+            <GoogleTasksPanel
+              city={snapshot?.city ?? profile.city}
+              plan={plan}
+              selectedActionIds={selectedActionIds}
+              accessToken={tasksToken}
+              onConnectTasks={handleSignIn}
+              onTokenExpired={handleTokenExpired}
             />
           </div>
         )}
