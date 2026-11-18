@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { GoogleTasksPanel } from './components/GoogleTasksPanel.tsx';
 import { HouseholdProfilePanel } from './components/HouseholdProfilePanel.tsx';
 import { ImpactSimulatorPanel } from './components/ImpactSimulatorPanel.tsx';
+import { LegalPagesView, type LegalDocType } from './components/LegalPagesView.tsx';
 import { LocationTelemetryBar } from './components/LocationTelemetryBar.tsx';
 import { TailoredPlanView } from './components/TailoredPlanView.tsx';
 import { TopNav, type WorkspaceTab } from './components/TopNav.tsx';
@@ -68,8 +69,22 @@ const DEFAULT_PROFILE: HouseholdProfile = {
   indoorGear: ['kitchen_exhaust', 'n95_masks'],
 };
 
+function resolveLegalRoute(pathname: string): LegalDocType | null {
+  const normalized = pathname.replace(/\/+$/, '').toLowerCase();
+  if (normalized === '/privacy' || normalized === '/privacy-policy') {
+    return 'privacy';
+  }
+  if (normalized === '/terms' || normalized === '/terms-of-service') {
+    return 'terms';
+  }
+  return null;
+}
+
 function ClearAirWorkspace() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('overview');
+  const [legalPage, setLegalPage] = useState<LegalDocType | null>(() =>
+    typeof window !== 'undefined' ? resolveLegalRoute(window.location.pathname) : null,
+  );
 
   // Auth & Firebase Readiness
   const [user, setUser] = useState<User | null>(null);
@@ -136,6 +151,25 @@ function ClearAirWorkspace() {
     },
     [],
   );
+
+  // Sync legal routes (/privacy, /terms) with browser history
+  useEffect(() => {
+    const onPopState = () => {
+      setLegalPage(resolveLegalRoute(window.location.pathname));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigateLegal = useCallback((next: LegalDocType | null) => {
+    const targetPath =
+      next === 'privacy' ? '/privacy' : next === 'terms' ? '/terms' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+    setLegalPage(next);
+    window.scrollTo({ top: 0 });
+  }, []);
 
   // Initial Firebase connection check + default city load
   useEffect(() => {
@@ -423,7 +457,10 @@ function ClearAirWorkspace() {
 
       <TopNav
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={(tab) => {
+          if (legalPage) navigateLegal(null);
+          setActiveTab(tab);
+        }}
         user={user}
         authReady={authReady}
         onSignIn={handleSignIn}
@@ -434,30 +471,38 @@ function ClearAirWorkspace() {
         id="main-content"
         className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6"
       >
-        {authError && (
-          <div
-            role="alert"
-            className="p-3.5 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-sm text-[#991B1B] flex items-center justify-between gap-4"
-          >
-            <span>{authError}</span>
-            <button
-              type="button"
-              onClick={() => setAuthError(null)}
-              className="text-xs font-medium underline cursor-pointer"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
+        {legalPage ? (
+          <LegalPagesView
+            docType={legalPage}
+            onBackHome={() => navigateLegal(null)}
+            onSwitchDoc={(next) => navigateLegal(next)}
+          />
+        ) : (
+          <>
+            {authError && (
+              <div
+                role="alert"
+                className="p-3.5 bg-[#FEF2F2] border border-[#FECACA] rounded-lg text-sm text-[#991B1B] flex items-center justify-between gap-4"
+              >
+                <span>{authError}</span>
+                <button
+                  type="button"
+                  onClick={() => setAuthError(null)}
+                  className="text-xs font-medium underline cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
 
-        {/* Always-present Live Location & AQI Telemetry Anchor */}
-        <LocationTelemetryBar
-          snapshot={snapshot}
-          loading={loadingAq}
-          error={aqError}
-          onSelectCity={handleSelectCity}
-          onUseGps={handleUseGps}
-          onSearchCities={searchCitiesApi}
+            {/* Always-present Live Location & AQI Telemetry Anchor */}
+            <LocationTelemetryBar
+              snapshot={snapshot}
+              loading={loadingAq}
+              error={aqError}
+              onSelectCity={handleSelectCity}
+              onUseGps={handleUseGps}
+              onSearchCities={searchCitiesApi}
         />
 
         {/* Workspace Tab Views */}
@@ -613,12 +658,36 @@ function ClearAirWorkspace() {
             onDeleteReport={deleteSmogReport}
           />
         )}
+          </>
+        )}
       </main>
 
       <footer className="border-t border-[#E2E8F0] bg-white">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#64748B]">
-          <span>ClearAir Winter · Household & Community Air Quality Assistant</span>
-          <span>Live air quality telemetry via Open-Meteo · Guidance for informational planning</span>
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B]">
+          <span>ClearAir Winter · Household &amp; Community Air Quality Assistant</span>
+          <div className="flex flex-wrap items-center gap-4">
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateLegal('privacy');
+              }}
+              className="text-[#475569] hover:text-[#0369A1] underline underline-offset-2"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateLegal('terms');
+              }}
+              className="text-[#475569] hover:text-[#0369A1] underline underline-offset-2"
+            >
+              Terms of Service
+            </a>
+            <span>Live telemetry via Open-Meteo</span>
+          </div>
         </div>
       </footer>
     </div>
