@@ -563,6 +563,7 @@ function ClearAirWorkspace() {
             <ImpactSimulatorPanel
               outdoorPm25={snapshot?.pm25 ?? 45}
               city={snapshot?.city ?? profile.city}
+              dailyHistory={snapshot?.dailyHistory ?? []}
               profile={profile}
               availableActions={availableSimulatorActions}
               selectedActionIds={selectedActionIds}

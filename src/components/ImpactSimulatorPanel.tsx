@@ -1,14 +1,16 @@
 import { ArrowDownRight, Leaf, ShieldCheck } from 'lucide-react';
-import type { HouseholdProfile } from '../types/airQuality.ts';
+import type { DailyAirQualityPoint, HouseholdProfile } from '../types/airQuality.ts';
 import {
   calculateChoiceImpact,
   WHO_24H_PM25_GUIDELINE,
   type ImpactActionInput,
 } from '../utils/impactCalculator.ts';
+import { ImpactHistoryD3Chart } from './ImpactHistoryD3Chart.tsx';
 
 interface ImpactSimulatorPanelProps {
   outdoorPm25: number;
   city: string;
+  dailyHistory: DailyAirQualityPoint[];
   profile: HouseholdProfile;
   availableActions: Array<ImpactActionInput & { label: string }>;
   selectedActionIds: string[];
@@ -20,6 +22,7 @@ interface ImpactSimulatorPanelProps {
 export function ImpactSimulatorPanel({
   outdoorPm25,
   city,
+  dailyHistory,
   profile,
   availableActions,
   selectedActionIds,
@@ -181,6 +184,14 @@ export function ImpactSimulatorPanel({
           </div>
         </div>
       </div>
+
+      {/* 7-Day Historical Air Quality vs. Chosen Habits D3 Chart */}
+      <ImpactHistoryD3Chart
+        city={city}
+        dailyHistory={dailyHistory}
+        profile={profile}
+        selectedActions={selectedActions}
+      />
 
       {/* Action Toggle List */}
       {availableActions.length === 0 ? (

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { HourlyForecastPoint, HouseholdProfile } from '../../types/airQuality.ts';
+import type {
+  DailyAirQualityPoint,
+  HourlyForecastPoint,
+  HouseholdProfile,
+} from '../../types/airQuality.ts';
 import {
+  buildSevenDayMitigationTrend,
   calculateBaselineIndoorPm25,
   calculateChoiceImpact,
   classifyAqiSeverity,
@@ -84,5 +89,26 @@ describe('impactCalculator', () => {
   it('sanitizes control characters and respects max length', () => {
     const dirty = '  Delhi\u0000\n\t Smog   Alert  ';
     expect(sanitizeTextInput(dirty, 14)).toBe('Delhi Smog Ale');
+  });
+
+  it('builds a 7-day mitigation trend comparing outdoor PM2.5, baseline indoor, and mitigated indoor air', () => {
+    const dailyHistory: DailyAirQualityPoint[] = [
+      { date: '2026-11-12', dayLabel: 'Nov 12', avgPm25: 95, peakPm25: 140, avgUsAqi: 171 },
+      { date: '2026-11-13', dayLabel: 'Nov 13', avgPm25: 132.4, peakPm25: 185, avgUsAqi: 190 },
+      { date: '2026-11-14', dayLabel: 'Nov 14', avgPm25: 68, peakPm25: 102, avgUsAqi: 157 },
+    ];
+
+    const trend = buildSevenDayMitigationTrend(dailyHistory, SAMPLE_PROFILE, [
+      { id: 'hepa', exposureReductionPct: 40, weeklyCo2SavedKg: 7, weeklyPm25AvoidedGrams: 10 },
+      { id: 'cook', exposureReductionPct: 25, weeklyCo2SavedKg: 3.5, weeklyPm25AvoidedGrams: 8 },
+    ]);
+
+    expect(trend).toHaveLength(3);
+    expect(trend[1].dayLabel).toBe('Nov 13');
+    expect(trend[1].outdoorPm25).toBe(132.4);
+    expect(trend[1].reductionPct).toBe(55);
+    expect(trend[1].mitigatedIndoorPm25).toBeLessThan(trend[1].baselineIndoorPm25);
+    expect(trend[1].dailyCo2SavedKg).toBe(1.5);
+    expect(trend[0].avgUsAqi).toBe(171);
   });
 });

@@ -168,6 +168,7 @@ export async function fetchLiveAirQuality(
   );
   aqUrl.searchParams.set('hourly', 'pm10,pm2_5,us_aqi');
   aqUrl.searchParams.set('timezone', 'auto');
+  aqUrl.searchParams.set('past_days', '6');
   aqUrl.searchParams.set('forecast_days', '1');
 
   const weatherUrl = new URL('https://api.open-meteo.com/v1/forecast');
@@ -231,18 +232,86 @@ export async function fetchLiveAirQuality(
       : {};
 
   const times = aqJson.hourly?.time ?? [];
-  const hourly: HourlyForecastPoint[] = times.slice(0, 24).map((t, idx) => {
-    const hourLabel = t.includes('T') ? t.split('T')[1].slice(0, 5) : `${String(idx).padStart(2, '0')}:00`;
-    return {
-      time: t,
-      hourLabel,
-      pm25: Math.round((aqJson.hourly?.pm2_5?.[idx] ?? aqJson.current?.pm2_5 ?? 0) * 10) / 10,
-      pm10: Math.round((aqJson.hourly?.pm10?.[idx] ?? aqJson.current?.pm10 ?? 0) * 10) / 10,
-      usAqi: Math.round(aqJson.hourly?.us_aqi?.[idx] ?? aqJson.current?.us_aqi ?? 0),
-      windSpeedKmh: Math.round((weatherJson.hourly?.wind_speed_10m?.[idx] ?? weatherJson.current?.wind_speed_10m ?? 8) * 10) / 10,
-      temperatureC: Math.round((weatherJson.hourly?.temperature_2m?.[idx] ?? weatherJson.current?.temperature_2m ?? 5) * 10) / 10,
+  const todayStartIdx = Math.max(0, times.length - 24);
+  const hourly: HourlyForecastPoint[] = times
+    .slice(todayStartIdx)
+    .map((t, idx) => {
+      const srcIdx = todayStartIdx + idx;
+      const hourLabel = t.includes('T')
+        ? t.split('T')[1].slice(0, 5)
+        : `${String(idx).padStart(2, '0')}:00`;
+      return {
+        time: t,
+        hourLabel,
+        pm25:
+          Math.round(
+            (aqJson.hourly?.pm2_5?.[srcIdx] ?? aqJson.current?.pm2_5 ?? 0) * 10,
+          ) / 10,
+        pm10:
+          Math.round(
+            (aqJson.hourly?.pm10?.[srcIdx] ?? aqJson.current?.pm10 ?? 0) * 10,
+          ) / 10,
+        usAqi: Math.round(
+          aqJson.hourly?.us_aqi?.[srcIdx] ?? aqJson.current?.us_aqi ?? 0,
+        ),
+        windSpeedKmh:
+          Math.round(
+            (weatherJson.hourly?.wind_speed_10m?.[idx] ??
+              weatherJson.current?.wind_speed_10m ??
+              8) * 10,
+          ) / 10,
+        temperatureC:
+          Math.round(
+            (weatherJson.hourly?.temperature_2m?.[idx] ??
+              weatherJson.current?.temperature_2m ??
+              5) * 10,
+          ) / 10,
+      };
+    });
+
+  // Group all available hourly points by YYYY-MM-DD for the 7-day historical trend
+  const dailyMap = new Map<
+    string,
+    { pm25Sum: number; pm25Peak: number; aqiSum: number; count: number }
+  >();
+  for (let i = 0; i < times.length; i++) {
+    const dateKey = times[i].slice(0, 10);
+    const pm25Val = aqJson.hourly?.pm2_5?.[i];
+    const aqiVal = aqJson.hourly?.us_aqi?.[i];
+    if (pm25Val === null || pm25Val === undefined) continue;
+    const bucket = dailyMap.get(dateKey) ?? {
+      pm25Sum: 0,
+      pm25Peak: 0,
+      aqiSum: 0,
+      count: 0,
     };
-  });
+    bucket.pm25Sum += pm25Val;
+    bucket.pm25Peak = Math.max(bucket.pm25Peak, pm25Val);
+    bucket.aqiSum += aqiVal ?? 0;
+    bucket.count += 1;
+    dailyMap.set(dateKey, bucket);
+  }
+
+  const dailyHistory = Array.from(dailyMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-7)
+    .map(([date, stats]) => {
+      const parsedDate = new Date(`${date}T12:00:00Z`);
+      const dayLabel = Number.isNaN(parsedDate.getTime())
+        ? date.slice(5)
+        : parsedDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC',
+          });
+      return {
+        date,
+        dayLabel,
+        avgPm25: Math.round((stats.pm25Sum / stats.count) * 10) / 10,
+        peakPm25: Math.round(stats.pm25Peak * 10) / 10,
+        avgUsAqi: Math.round(stats.aqiSum / stats.count),
+      };
+    });
 
   const ventilation = findSafestVentilationWindow(hourly);
 
@@ -262,6 +331,7 @@ export async function fetchLiveAirQuality(
     humidityPct: Math.round(weatherJson.current?.relative_humidity_2m ?? 55),
     ventilation,
     hourly,
+    dailyHistory,
   };
 
   setBoundedCache(aqCache, cacheKey, snapshot);

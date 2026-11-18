@@ -1,5 +1,6 @@
 import type {
   AqiSeverityInfo,
+  DailyAirQualityPoint,
   HourlyForecastPoint,
   HouseholdProfile,
   VentilationWindow,
@@ -263,4 +264,35 @@ export function calculateChoiceImpact(
     weeklyPm25AvoidedGrams: Math.round(weeklyPm25AvoidedGrams * 10) / 10,
     selectedCount: selectedActions.length,
   };
+}
+
+export interface SevenDayTrendPoint {
+  date: string;
+  dayLabel: string;
+  outdoorPm25: number;
+  baselineIndoorPm25: number;
+  mitigatedIndoorPm25: number;
+  reductionPct: number;
+  dailyCo2SavedKg: number;
+  avgUsAqi: number;
+}
+
+export function buildSevenDayMitigationTrend(
+  dailyHistory: DailyAirQualityPoint[],
+  profile: HouseholdProfile,
+  selectedActions: ImpactActionInput[],
+): SevenDayTrendPoint[] {
+  return dailyHistory.map((day) => {
+    const impact = calculateChoiceImpact(day.avgPm25, profile, selectedActions);
+    return {
+      date: day.date,
+      dayLabel: day.dayLabel,
+      outdoorPm25: Math.round(day.avgPm25 * 10) / 10,
+      baselineIndoorPm25: impact.baselineIndoorPm25,
+      mitigatedIndoorPm25: impact.projectedIndoorPm25,
+      reductionPct: impact.indoorReductionPct,
+      dailyCo2SavedKg: Math.round((impact.weeklyCo2SavedKg / 7) * 10) / 10,
+      avgUsAqi: Math.round(day.avgUsAqi),
+    };
+  });
 }

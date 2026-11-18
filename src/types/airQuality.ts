@@ -80,6 +80,14 @@ export interface VentilationWindow {
   inversionRisk: 'low' | 'moderate' | 'high';
 }
 
+export interface DailyAirQualityPoint {
+  date: string;
+  dayLabel: string;
+  avgPm25: number;
+  peakPm25: number;
+  avgUsAqi: number;
+}
+
 export interface AirQualitySnapshot {
   city: string;
   country: string;
@@ -96,6 +104,7 @@ export interface AirQualitySnapshot {
   humidityPct: number;
   ventilation: VentilationWindow;
   hourly: HourlyForecastPoint[];
+  dailyHistory: DailyAirQualityPoint[];
 }
 
 export type AqiSeverityLevel =

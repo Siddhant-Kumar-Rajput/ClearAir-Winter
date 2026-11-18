@@ -1,12 +1,12 @@
 {
-  "projectId": "gen-lang-client-0379937837",
-  "appId": "1:291294544552:web:0332d080709e9a4ef5389d",
-  "apiKey": "AIzaSyAT52Qd5f9ZSBwn77bcJJQxd4xGXxKsIsU",
-  "authDomain": "gen-lang-client-0379937837.firebaseapp.com",
+  "projectId": "clearair-winter",
+  "appId": "1:1086015029264:web:763208e300a900cb428a95",
+  "apiKey": "AIzaSyA-8ujutkk83JTijaIJK6ZOyUVXagRIL6M",
+  "authDomain": "clearair-winter.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-90f9b8d3-29c0-422e-82ea-f65d5e181354",
-  "storageBucket": "gen-lang-client-0379937837.firebasestorage.app",
-  "messagingSenderId": "291294544552",
+  "storageBucket": "clearair-winter.firebasestorage.app",
+  "messagingSenderId": "1086015029264",
   "measurementId": "",
-  "oAuthClientId": "291294544552-b6c8st38186ikkg4d3ug79p79ecf3hc7.apps.googleusercontent.com",
+  "oAuthClientId": "1086015029264-7pvns22seug5u90o14pp1np6iqads6k1.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }
